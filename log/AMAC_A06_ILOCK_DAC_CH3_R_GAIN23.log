@@ -1,0 +1,22 @@
+ADC_channel_settings (min, minthr, avg, maxthr, max): 73 215 357 499 642
+ADC_channel_value: 363
+ILOCK_Flag_HV_HI_reset_val: 0
+ILOCK_Flag_HV_LO_reset_val: 0
+ILOCK_Flag_LV_HI_reset_val: 0
+ILOCK_Flag_LV_LO_reset_val: 0
+ILOCK_Flag_HV_HI_triggered_val: 8
+ILOCK_Flag_HV_LO_triggered_val: 8
+ILOCK_Flag_LV_HI_triggered_val: 8
+ILOCK_Flag_LV_LO_triggered_val: 8
+ILOCK_Flag_HV_HI_SWreset_val: 0
+ILOCK_Flag_HV_LO_SWreset_val: 0
+ILOCK_Flag_LV_HI_SWreset_val: 0
+ILOCK_Flag_LV_LO_SWreset_val: 0
+ILOCK_disabled_Output_enabled_Output_val_HV: 1
+ILOCK_disabled_Output_enabled_Output_val_LV: 1
+ILOCK_disabled_Output_enabled_No_LAM_pulses: 0
+ILOCK_enabled_Output_enabled_Output_val_HV: 1
+ILOCK_enabled_Output_enabled_Output_val_LV: 1
+ILOCK_enabled_Output_enabled_No_LAM_pulses: 0
+ILOCK_disabled_Output_reset_Output_val_HV: 1
+ILOCK_disabled_Output_reset_Output_val_LV: 1
