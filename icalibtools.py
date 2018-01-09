@@ -29,7 +29,7 @@ def filter_bad_data(data):
                     filtdata=filtdata.append(chgroup[abs(chgroup.ADCvalue-(chgroup.InputVoltage-b)/m)<8])
     return filtdata
 
-def calibrate(data):
+def calibrate(data, fixCalib=True):
     calibs=pd.DataFrame(columns=['AMAC','Channel','BandgapControl','RampGain','OpAmpGain','m','b','Voff','RI'])
 
     for amackey,amacgroup in data.groupby('AMAC'):
@@ -40,18 +40,31 @@ def calibrate(data):
                         # Remove any saturated region
                         subdata=oagroup[oagroup.InputCurrent<ILIMITS.get(oakey/2,1)].dropna()
 
-                        # Fit with the corrections
-                        popt, pcov = curve_fit(currentcalib, subdata, subdata.InputCurrent,p0=(0,0,-0.1,50))
-                        m,b,Voff,RI=popt
+                        if fixCalib:
+                            # Fit with the corrections
+                            print('test')
+                            popt, pcov = curve_fit(currentcalib, subdata, subdata.InputCurrent,p0=(0,0,-0.1,50),maxfev=10000,bounds=((0,-np.inf,-np.inf,0),(np.inf,np.inf,np.inf,np.inf)))
+                            m,b,Voff,RI=popt
 
-                        #subdata['CorrectedInputCurrent']=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
-                        #m,b=np.polyfit(pd.to_numeric(rggroup.ADCvalue),rggroup.InputVoltage,1)
+                            # Filter out bad guys
+                            CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
+                            filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
+                            popt, pcov = curve_fit(currentcalib, filtsubdata, filtsubdata.InputCurrent,p0=(0,0,0.1,0))
+                            m,b,Voff,RI=popt
+                        else:
+                            Voff=-0.1064
+                            RI=62.8
+                            CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
+                            m,b=np.polyfit(pd.to_numeric(subdata.ADCvalue),CorrectedInputCurrent,1)
 
-                        # Filter out bad guys
-                        CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
-                        filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
-                        popt, pcov = curve_fit(currentcalib, filtsubdata, filtsubdata.InputCurrent,p0=(0,0,0.1,0))
-                        m,b,Voff,RI=popt
+                            # Filter out bad guys
+                            filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
+                            filtCorrectedInputCurrent=CorrectedInputCurrent[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
+                            #print(abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m))
+                            #print(filtsubdata)
+                            m,b=np.polyfit(pd.to_numeric(filtsubdata.ADCvalue),filtCorrectedInputCurrent,1)
+                            print(list(filtsubdata.ADCvalue))
+                            print(list(filtCorrectedInputCurrent))
 
                         # Save the results
                         calibs=calibs.append({'AMAC':amackey,
@@ -111,7 +124,7 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3,OA=5):
                         plt.subplot2grid((3,3), (0,0), rowspan=2, colspan=3)
                         plt.semilogx(CorrectedInputCurrent*1e3,chgroup.ADCvalue,'.k')
                         plt.semilogx(CorrectedInputCurrent*1e3,(CorrectedInputCurrent-b)/m,'--b')
-                        plt.ylabel('Calibrated Current [mA]')
+                        plt.ylabel('ADC counts')
                         plt.xlim(1e-4,xlim)
                         plt.ylim(0,1024)
                         plt.xticks([])
@@ -136,45 +149,3 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3,OA=5):
 
                         plt.show()
     
-def test_calibrate_perchip_perchannel(data,calib,AMAC=None,BG=10,RG=3):
-    if AMAC!=None: data=data[data.AMAC==AMAC]
-    data=data[(data.BandgapControl==BG)&(data.RampGain==RG)]
-
-    for amackey,amacgroup in data.groupby('AMAC'):
-        for bgkey,bggroup in amacgroup.groupby('BandgapControl'):
-            for rgkey,rggroup in bggroup.groupby('RampGain'):
-                for chkey,chgroup in rggroup.groupby('Channel'):
-                    calibsource=calib[(calib.AMAC==amackey)&(calib.BandgapControl==bgkey)&(calib.RampGain==rgkey)&(calib.Channel==chkey)]
-                    m=calibsource.m.iloc[0]
-                    b=calibsource.b.iloc[0]
-
-                    plot_calibration(chgroup,m,b)
-
-def test_calibrate_perchip_perside(data,calib,AMAC=None,BG=10,RG=3):
-    if AMAC!=None: data=data[data.AMAC==AMAC]
-    data=data[(data.BandgapControl==BG)&(data.RampGain==RG)]
-
-    for amackey,amacgroup in data.groupby('AMAC'):
-        for bgkey,bggroup in amacgroup.groupby('BandgapControl'):
-            for rgkey,rggroup in bggroup.groupby('RampGain'):
-                for chkey,chgroup in rggroup.groupby('Channel'):
-                    chcalibkey='CH0_L' if '_L' in chkey else 'CH0_R'
-                    calibsource=calib[(calib.AMAC==amackey)&(calib.BandgapControl==bgkey)&(calib.RampGain==rgkey)&(calib.Channel==chcalibkey)]
-                    m=calibsource.m.iloc[0]
-                    b=calibsource.b.iloc[0]
-
-                    plot_calibration(chgroup,m,b)
-
-def test_calibrate_perchip(data,calib,AMAC=None,BG=10,RG=3,ch='CH0_R'):
-    if AMAC!=None: data=data[data.AMAC==AMAC]
-    data=data[(data.BandgapControl==BG)&(data.RampGain==RG)]
-
-    for amackey,amacgroup in data.groupby('AMAC'):
-        for bgkey,bggroup in amacgroup.groupby('BandgapControl'):
-            for rgkey,rggroup in bggroup.groupby('RampGain'):
-                for chkey,chgroup in rggroup.groupby('Channel'):
-                    calibsource=calib[(calib.AMAC==amackey)&(calib.BandgapControl==bgkey)&(calib.RampGain==rgkey)&(calib.Channel=='CH0_R')]
-                    m=calibsource.m.iloc[0]
-                    b=calibsource.b.iloc[0]
-
-                    plot_calibration(chgroup,m,b)
