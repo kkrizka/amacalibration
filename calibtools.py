@@ -53,6 +53,7 @@ def convert(count,calib,AMAC=None,BG=10,RG=3,Channel=None):
 
 def plot_calibration(data,calib,AMAC=None,BG=10,RG=3):
     if AMAC!=None:
+        print(AMAC)
         data =data [data .AMAC==AMAC]
         calib=calib[calib.AMAC==AMAC]
 
@@ -72,11 +73,11 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3):
                     plt.subplots_adjust(hspace=0.,wspace=0.)
 
                     plt.subplot2grid((3,3), (0,0), rowspan=2, colspan=3)
-                    plt.plot(chgroup.InputVoltage,m*chgroup.ADCvalue+b,'.k')
-                    plt.plot(chgroup.InputVoltage,chgroup.InputVoltage,'--b')
-                    plt.ylabel('Calibrated Voltage [V]')
+                    plt.plot(chgroup.InputVoltage,chgroup.ADCvalue,'.k')
+                    plt.plot(chgroup.InputVoltage,(chgroup.InputVoltage-b)/m,'--b')
+                    plt.ylabel('ADC counts')
                     plt.xlim(0,1.2)
-                    plt.ylim(0,1.2)
+                    plt.ylim(0,1024)
                     plt.xticks([])
                     plt.title('%s, %s, Ramp Gain = %d, Bandgap Control = %d'%(amackey,chkey,RG,BG))
                     plt.text(0.1,1,'V = m ADC + b')
@@ -84,8 +85,8 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3):
                     plt.text(0.1,0.8,'b = %0.2f mV'%(b*1000))
 
                     plt.subplot2grid((3,3), (2,0), rowspan=1, colspan=3)
-                    resid=m*chgroup.ADCvalue+b-chgroup.InputVoltage
-                    plt.plot(chgroup.InputVoltage,resid*1000,'-b')
+                    resid=(chgroup.InputVoltage-b)/m-chgroup.ADCvalue
+                    plt.plot(chgroup.InputVoltage,resid,'-b')
                     plt.plot([0,1.2],[0,0],'--k')
                     plt.xlim(0,1.2)
                     plt.ylim(-10,10)
