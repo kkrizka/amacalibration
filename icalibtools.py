@@ -36,35 +36,40 @@ def calibrate(data, fixCalib=True):
         for chkey,chgroup in amacgroup.groupby('Channel'):
             for bgkey,bggroup in chgroup.groupby('BandgapControl'):
                 for rgkey,rggroup in bggroup.groupby('RampGain'):
-                    for oakey,oagroup in bggroup.groupby('OpAmpGain'):
+                    for oakey,oagroup in rggroup.groupby('OpAmpGain'):
                         # Remove any saturated region
                         subdata=oagroup[oagroup.InputCurrent<ILIMITS.get(oakey/2,1)].dropna()
 
                         if fixCalib:
-                            # Fit with the corrections
-                            print('test')
-                            popt, pcov = curve_fit(currentcalib, subdata, subdata.InputCurrent,p0=(0,0,-0.1,50),maxfev=10000,bounds=((0,-np.inf,-np.inf,0),(np.inf,np.inf,np.inf,np.inf)))
-                            m,b,Voff,RI=popt
-
-                            # Filter out bad guys
+                            # Initial fit using a linear relationship
+                            Voff=-0.1
+                            RI=50
                             CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
-                            filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
-                            popt, pcov = curve_fit(currentcalib, filtsubdata, filtsubdata.InputCurrent,p0=(0,0,0.1,0))
+                            m,b=np.polyfit(pd.to_numeric(subdata.ADCvalue),CorrectedInputCurrent,1)
+
+                            # Filter out bad guys, pass 1
+                            filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<512]
+                            popt, pcov = curve_fit(currentcalib, filtsubdata, filtsubdata.InputCurrent,p0=(m,b,Voff,RI),bounds=((0,-np.inf,-np.inf,0),(np.inf,np.inf,np.inf,np.inf)))
                             m,b,Voff,RI=popt
+                            CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
+
+                            # Filter out bad guys, pass 2
+                            filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<8]
+                            filtCorrectedInputCurrent=(filtsubdata.InputCurrent*(filtsubdata.ResistorValue+60)-Voff)/((filtsubdata.ResistorValue+60)+RI)
+                            popt, pcov = curve_fit(currentcalib, filtsubdata, filtsubdata.InputCurrent,p0=(m,b,Voff,RI),bounds=((0,-np.inf,-np.inf,0),(np.inf,np.inf,np.inf,np.inf)))
+                            m,b,Voff,RI=popt
+                            
+                            
                         else:
-                            Voff=-0.1064
-                            RI=62.8
+                            Voff=-0.1
+                            RI=50
                             CorrectedInputCurrent=(subdata.InputCurrent*(subdata.ResistorValue+60)-Voff)/((subdata.ResistorValue+60)+RI)
                             m,b=np.polyfit(pd.to_numeric(subdata.ADCvalue),CorrectedInputCurrent,1)
 
                             # Filter out bad guys
                             filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
-                            filtCorrectedInputCurrent=CorrectedInputCurrent[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
-                            #print(abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m))
-                            #print(filtsubdata)
+                            filtCorrectedInputCurrent=(filtsubdata.InputCurrent*(filtsubdata.ResistorValue+60)-Voff)/((filtsubdata.ResistorValue+60)+RI)
                             m,b=np.polyfit(pd.to_numeric(filtsubdata.ADCvalue),filtCorrectedInputCurrent,1)
-                            print(list(filtsubdata.ADCvalue))
-                            print(list(filtCorrectedInputCurrent))
 
                         # Save the results
                         calibs=calibs.append({'AMAC':amackey,
@@ -139,11 +144,11 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3,OA=5):
                         plt.text(1.5e-4,500,'\n'.join(info),multialignment='left')
 
                         plt.subplot2grid((3,3), (2,0), rowspan=1, colspan=3)
-                        resid=(CorrectedInputCurrent-b)/m-chgroup.ADCvalue
+                        resid=chgroup.ADCvalue-(CorrectedInputCurrent-b)/m
                         plt.semilogx(CorrectedInputCurrent*1e3,resid,'.k')
                         plt.semilogx([1e-4,3],[0,0],'--b')
                         plt.xlim(1e-4,xlim)
-                        plt.ylim(-5,5)
+                        plt.ylim(-10,10)
                         plt.ylabel('Fit-Data')
                         plt.xlabel('Corrected Input Current [mA]')
 

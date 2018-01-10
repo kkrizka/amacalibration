@@ -80,17 +80,21 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3):
                     plt.ylim(0,1024)
                     plt.xticks([])
                     plt.title('%s, %s, Ramp Gain = %d, Bandgap Control = %d'%(amackey,chkey,RG,BG))
-                    plt.text(0.1,1,'V = m ADC + b')
-                    plt.text(0.1,0.9,'m = %0.2f mV/count'%(m*1000))
-                    plt.text(0.1,0.8,'b = %0.2f mV'%(b*1000))
+
+                    info=[]
+                    info.append('V = m ADC + b')
+                    info.append('V = m ADC + b')
+                    info.append('m = %0.2f mV/count'%(m*1000))
+                    info.append('b = %0.2f mV'%(b*1000))
+                    plt.text(0.8,200,'\n'.join(info),multialignment='left')
 
                     plt.subplot2grid((3,3), (2,0), rowspan=1, colspan=3)
-                    resid=(chgroup.InputVoltage-b)/m-chgroup.ADCvalue
+                    resid=chgroup.ADCvalue-(chgroup.InputVoltage-b)/m
                     plt.plot(chgroup.InputVoltage,resid,'-b')
                     plt.plot([0,1.2],[0,0],'--k')
                     plt.xlim(0,1.2)
                     plt.ylim(-10,10)
-                    plt.ylabel('Calib-Input [mV]')
+                    plt.ylabel('Fit-Data')
                     plt.xlabel('Input Voltage [V]')
                     plt.text(0.1,5,'diff %0.2f $\pm$ %0.2f mV'%(resid.mean()*1000,resid.std()*1000))
                     plt.text(0.5,5,'maxdiff %d mV'%((max(abs(resid.max()),abs(resid.min()))*1000)))
