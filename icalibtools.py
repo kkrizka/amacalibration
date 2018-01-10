@@ -29,7 +29,7 @@ def filter_bad_data(data):
                     filtdata=filtdata.append(chgroup[abs(chgroup.ADCvalue-(chgroup.InputVoltage-b)/m)<8])
     return filtdata
 
-def calibrate(data, fixCalib=True):
+def calibrate(data, fixCalib=False):
     calibs=pd.DataFrame(columns=['AMAC','Channel','BandgapControl','RampGain','OpAmpGain','m','b','Voff','RI'])
 
     for amackey,amacgroup in data.groupby('AMAC'):
@@ -38,7 +38,7 @@ def calibrate(data, fixCalib=True):
                 for rgkey,rggroup in bggroup.groupby('RampGain'):
                     for oakey,oagroup in rggroup.groupby('OpAmpGain'):
                         # Remove any saturated region
-                        subdata=oagroup[oagroup.InputCurrent<ILIMITS.get(oakey/2,1)].dropna()
+                        subdata=oagroup[oagroup.InputCurrent<ILIMITS.get(int(oakey/2),1)].dropna()
 
                         if fixCalib:
                             # Initial fit using a linear relationship
@@ -69,6 +69,8 @@ def calibrate(data, fixCalib=True):
                             # Filter out bad guys
                             filtsubdata=subdata[abs(subdata.ADCvalue-(CorrectedInputCurrent-b)/m)<16]
                             filtCorrectedInputCurrent=(filtsubdata.InputCurrent*(filtsubdata.ResistorValue+60)-Voff)/((filtsubdata.ResistorValue+60)+RI)
+                            if len(filtsubdata)==0: continue
+
                             m,b=np.polyfit(pd.to_numeric(filtsubdata.ADCvalue),filtCorrectedInputCurrent,1)
 
                         # Save the results
@@ -121,7 +123,7 @@ def plot_calibration(data,calib,AMAC=None,BG=10,RG=3,OA=5):
                         CorrectedInputCurrent=(chgroup.InputCurrent*(chgroup.ResistorValue+60)-Voff)/((chgroup.ResistorValue+60)+RI)
 
                         # Get x limit
-                        xlim=ILIMITS.get(oakey/2,1)*1e3
+                        xlim=ILIMITS.get(int(oakey/2),1)*1e3
 
                         # Plot the calibration
                         plt.subplots_adjust(hspace=0.,wspace=0.)
