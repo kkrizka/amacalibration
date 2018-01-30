@@ -85,7 +85,7 @@ def plot_calibration(data,calib,AMAC=None,Channel=None,BG=None,RG=None):
                     plt.xlim(0,1.2)
                     plt.ylim(0,1024)
                     plt.xticks([])
-                    plt.title('%s, %s, Ramp Gain = %d, Bandgap Control = %d'%(amackey,chkey,RG,BG))
+                    plt.title('%s, %s, RampGain = %d, BandgapControl = %d'%(amackey,chkey,rgkey,bgkey))
 
                     info=[]
                     info.append('V = m ADC + b')

@@ -11,7 +11,11 @@ ILIMITS={0: 1e-5,
          1: 3.5e-4,
          2: 2.5e-3,
          3: 3e-3,
-         4: 3e-3}
+         4: 3e-3,
+         5: 3e-3,
+         6: 3e-3,
+         7: 3e-3,
+         8: 3e-3}
 
 
 def currentcalib(subdata, m, b, Voff, RI):
@@ -125,11 +129,17 @@ def plot_calibration(data,calib,AMAC=None,Channel=None,BG=None,RG=None,OA=None):
                     for chkey,chgroup in oagroup.groupby('Channel'):
                         # Retrieve the calibration
                         thiscalib=calib[(calib.AMAC==amackey)&(calib.BandgapControl==bgkey)&(calib.RampGain==rgkey)&(calib.OpAmpGain==oakey)&(calib.Channel==chkey)]
-                        m=thiscalib.m.iloc[0]
-                        b=thiscalib.b.iloc[0]
 
-                        Voff=thiscalib.Voff.iloc[0]
-                        RI=thiscalib.RI.iloc[0]
+                        m=None
+                        b=None
+                        Voff=-0.1
+                        RI=50
+                        if len(thiscalib)>0:
+                            m=thiscalib.m.iloc[0]
+                            b=thiscalib.b.iloc[0]
+
+                            Voff=thiscalib.Voff.iloc[0]
+                            RI=thiscalib.RI.iloc[0]
 
                         # Apply corrections
                         CorrectedInputCurrent=(chgroup.InputCurrent*(chgroup.ResistorValue+60)-Voff)/((chgroup.ResistorValue+60)+RI)
@@ -142,30 +152,33 @@ def plot_calibration(data,calib,AMAC=None,Channel=None,BG=None,RG=None,OA=None):
 
                         plt.subplot2grid((3,3), (0,0), rowspan=2, colspan=3)
                         plt.semilogx(CorrectedInputCurrent*1e3,chgroup.ADCvalue,'.k')
-                        plt.semilogx(CorrectedInputCurrent*1e3,(CorrectedInputCurrent-b)/m,'--b')
+                        if m!=None: plt.semilogx(CorrectedInputCurrent*1e3,(CorrectedInputCurrent-b)/m,'--b')
                         plt.ylabel('ADC counts')
                         plt.xlim(1e-4,xlim)
                         plt.ylim(0,1024)
                         plt.xticks([])
-                        plt.title('%s, %s, Bandgap Control = %d, Ramp Gain = %d, OpAmp Gain = %d'%(amackey,chkey,bgkey,rgkey,oakey))
+                        plt.title('%s, %s, BandgapControl = %d, RampGain = %d, OpAmpGain = %d'%(amackey,chkey,bgkey,rgkey,oakey))
 
                         info=[]
                         info.append('I = m ADC + b')
-                        if m<1e-6:
-                            info.append('m = %0.2f nA/count'%(m*1e9))
-                        else:
-                            info.append('m = %0.2f $\mu$A/count'%(m*1e6))
-                        if b<1e-3:
-                            info.append('b = %0.2f $\mu$A'%(b*1e6))
-                        else:
-                            info.append('b = %0.2f mA'%(b*1e3))
-                        info.append('R$_{int}$ %0.1f $\Omega$'%(RI))
-                        info.append('V$_{off}$ %0.1f mV'%(Voff*1e3))
+                        if m!=None:
+                            if m<1e-6:
+                                info.append('m = %0.2f nA/count'%(m*1e9))
+                            else:
+                                info.append('m = %0.2f $\mu$A/count'%(m*1e6))
+                        if b!=None:
+                            if b<1e-3:
+                                info.append('b = %0.2f $\mu$A'%(b*1e6))
+                            else:
+                                info.append('b = %0.2f mA'%(b*1e3))
+                        if RI!=None: info.append('R$_{int}$ %0.1f $\Omega$'%(RI))
+                        if Voff!=None: info.append('V$_{off}$ %0.1f mV'%(Voff*1e3))
                         plt.text(1.5e-4,500,'\n'.join(info),multialignment='left')
 
                         plt.subplot2grid((3,3), (2,0), rowspan=1, colspan=3)
-                        resid=chgroup.ADCvalue-(CorrectedInputCurrent-b)/m
-                        plt.semilogx(CorrectedInputCurrent*1e3,resid,'.k')
+                        if m!=None:
+                            resid=chgroup.ADCvalue-(CorrectedInputCurrent-b)/m
+                            plt.semilogx(CorrectedInputCurrent*1e3,resid,'.k')
                         plt.semilogx([1e-4,3],[0,0],'--b')
                         plt.xlim(1e-4,xlim)
                         plt.ylim(-10,10)
