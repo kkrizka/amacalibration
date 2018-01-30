@@ -13,12 +13,14 @@ class Reports:
 
         self.vin=pd.concat([r.vin for r in reports], ignore_index=True) if len(reports)>0 else None
         self.ileak=pd.concat([r.ileak for r in reports], ignore_index=True) if len(reports)>0 else None
+        self.bgo=pd.concat([r.bgo for r in reports], ignore_index=True) if len(reports)>0 else None
 
     def append(self,r):
         self.names.append(r.name)
 
         self.vin=pd.concat([r.vin, self.vin], ignore_index=True) if self.vin is not None else r.vin
         self.ileak=pd.concat([r.ileak, self.ileak], ignore_index=True) if self.ileak is not None else r.ileak
+        self.bgo=pd.concat([r.bgo, self.bgo], ignore_index=True) if self.bgo is not None else r.bgo
 
 
 class Report:
@@ -26,9 +28,11 @@ class Report:
         self.name=name
         self.vin=None
         self.ileak=None
+        self.bgo=None
 
         self.load_vin()
         self.load_ileak()
+        self.load_bgo()
 
     def load_vin(self):
         datapath='pblog/{PB}_VIN.log'.format(PB=self.name)
@@ -61,3 +65,17 @@ class Report:
         plt.ylabel('Ileak [counts]')
         plt.title(self.name)
         plt.legend(frameon=False)
+
+    def load_bgo(self):
+        datapath='pblog/{PB}_Bandgap.log'.format(PB=self.name)
+        data=pd.DataFrame()
+        if os.path.exists(datapath):
+            data=pd.read_csv(datapath,sep=' ')
+            data['PB']=self.name
+        self.bgo=data
+
+    def render_bgo(self):
+        plt.plot(self.bgo.BandgapControl,self.bgo.Voltage)
+        plt.xlabel('BandgapControl')
+        plt.ylabel('Bandgap Voltage [V]')
+        plt.title(self.name)
