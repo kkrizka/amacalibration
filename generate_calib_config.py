@@ -25,11 +25,14 @@ reports=report.Reports(reports)
 # Perform the calibration
 calib=calibtools.calibrate(reports.calib)
 
-calib.to_csv('calib.csv',index=False)
+#
+# Save data
+for amackey,amacgroup in calib.groupby('AMAC'):
+    amacgroup.to_csv('data/calib/calib_%s.csv'%amackey, index=False)
 
 #
 # Save pretty images
-for ckey,cdata in calib.groupby(['AMAC','Channel','BandgapControl','RampGain']):
-    calibtools.plot_calibration(reports.calib,calib,ckey[0],ckey[1],ckey[2],ckey[3])
+for ckey,cdata in reports.calib.groupby(['AMAC','Channel','BandgapControl','RampGain']):
+    calibtools.plot_calibration(cdata,calib,ckey[0],ckey[1],ckey[2],ckey[3])
     plt.show()
     plt.savefig('img/calib_%s_%s_BandgapControl%d_RampGain%d.png'%ckey)
