@@ -1,0 +1,6 @@
+Write_1_to_enable__readback: 1
+Write_1_to_enable__LVCTRL: 1
+Write_1_to_enable__LVCTRLB: 0
+Write_0_to_enable__readback: 0
+Write_0_to_enable__LVCTRL: 0
+Write_0_to_enable__LVCTRLB: 1
