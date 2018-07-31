@@ -18,6 +18,7 @@ re_generalparams=re.compile('log/(AMAC_[a-zA-Z0-9]+)_GeneralParams.log')
 reports=[]
 for path in glob.glob('log/AMAC_???_GeneralParams.log'):
     match=re_generalparams.match(path)
+    if match==None: continue
     reports.append(report.Report(match.group(1)))
 reports=report.Reports(reports)
 
